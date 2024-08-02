@@ -3,6 +3,16 @@
         <br>
         <h2>{{student.firstName}} {{student.lastName}} - Student: {{student.studentNum}}</h2>
         <hr />
+        {{#if viewData.courses}}
+        <select class="form-control" name="course" id="course">
+            <option value="">Select Course</option>
+            {{#each viewData.courses}}
+            <option value="{{courseId}}" {{#if selected}} selected {{/if}}>{{courseCode}}</option>
+            {{/each}}
+        </select>
+        {{else}}
+        <div>No Courses</div>
+        {{/if}}
         <form method="post" action="/student/update">
             <input type="hidden" name="studentNum" value="{{student.studentNum}}" />
             <fieldset>
