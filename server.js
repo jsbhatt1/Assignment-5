@@ -1,10 +1,10 @@
 /*********************************************************************************
-*  WEB700 – Assignment 05
+*  WEB700 – Assignment 06
 *  I declare that this assignment is my own work in accordance with Seneca  Academic Policy.  No part 
 *  of this assignment has been copied manually or electronically from any other source 
 *  (including 3rd party web sites) or distributed to other students.
 * 
-*  Name: Jayshivam Sanatbhai Bhatt | Student ID: 150464238 (Seneca ID: jsbhatt1) | Date: July 25, 2024
+*  Name: Jayshivam Sanatbhai Bhatt | Student ID: 150464238 (Seneca ID: jsbhatt1) | Date: August, 1 2024
 *
 * Online (Heroku) Link: https://limitless-wildwood-31904-e0b0aefec959.herokuapp.com/
 *
@@ -15,8 +15,6 @@ const HTTP_PORT = process.env.PORT || 8080;
 const express = require("express");
 const app = express();
 const collegeData = require('./modules/collegeData');
-const students = require('./data/students')
-const courses = require('./data/courses')
 const exphbs = require('express-handlebars');
 
 const handlebars = exphbs.create({
@@ -52,19 +50,27 @@ app.use(function(req, res, next) {
 });
 
 app.get('/students', (req, res) => {
-    if (students.length > 0) {
-      res.render('students', { students });
-    } else {
-      res.render('students', { message: "no results" });
-    }
+    collegeData.getAllStudents().then((students) => {
+        if (students.length > 0) {
+            res.render('students', { students: students });
+        } else {
+            res.render('students', { message: "no results" });
+        }
+    }).catch(() => {
+        res.render('students', { message: "no results" });
+    });
 });
 
 app.get('/courses', (req, res) => {
-    if (courses.length > 0) {
-      res.render('courses', { courses });
-    } else {
-      res.render('courses', { message: "no results" });
-    }
+    collegeData.getCourses().then((courses) => {
+        if (courses.length > 0) {
+            res.render('courses', { courses: courses });
+        } else {
+            res.render('courses', { message: "no results" });
+        }
+    }).catch(() => {
+        res.render('courses', { message: "no results" });
+    });
 });
 
 app.get('/course/:id', (req, res) => {
@@ -77,21 +83,18 @@ app.get('/course/:id', (req, res) => {
       });
 });
 
-app.get('/student/:num', (req, res) => {
+app.get("/student/:studentNum", (req, res) => {
     let viewData = {};
-    collegeData.getStudentByNum(Number(req.params.num)).then((data) => {
-        
+
+    data.getStudentByNum(req.params.studentNum).then((data) => {
         if (data) {
-            viewData.student = data; // storing the data into "viewData" object
+            viewData.student = data;
         } else {
             viewData.student = null;
         }
-
     }).catch(() => {
         viewData.student = null;
-
-    }).then(collegeData.getCourses)
-    .then((data) => {
+    }).then(data.getCourses).then((data) => {
         viewData.courses = data;
         for (let i = 0; i < viewData.courses.length; i++) {
             if (viewData.courses[i].courseId == viewData.student.course) {
@@ -100,13 +103,52 @@ app.get('/student/:num', (req, res) => {
         }
     }).catch(() => {
         viewData.courses = [];
-        
     }).then(() => {
         if (viewData.student == null) {
-            res.status(404).send("Student Not Found");     // if no student - return an error
+            res.status(404).send("Student Not Found");
         } else {
             res.render("student", { viewData: viewData });
         }
+    });
+});
+
+app.get("/student/delete/:studentNum", (req, res) => {
+    data.deleteStudentByNum(req.params.studentNum).then(() => {
+        res.redirect("/students");
+    }).catch((err) => {
+        res.status(500).send("Unable to Remove Student / Student not found");
+    });
+});
+
+app.get('/', (req, res) => {
+    res.render('home');
+});  
+
+app.get('/about', (req, res) => {
+    res.render('about');
+});  
+
+app.get('/htmlDemo', (req, res) => {
+    res.render('htmlDemo');
+});  
+
+app.get("/students/add", (req, res) => {
+    data.getCourses().then((data) => {
+        res.render("addStudent", { courses: data });
+    }).catch(() => {
+        res.render("addStudent", { courses: [] });
+    });
+});
+
+app.get("/courses/add", (req, res) => {
+    res.render("addCourse");
+});
+
+app.get("/course/delete/:id", (req, res) => {
+    data.deleteCourseById(req.params.id).then(() => {
+        res.redirect("/courses");
+    }).catch((err) => {
+        res.status(500).send("Unable to Remove Course / Course not found");
     });
 });
 
@@ -122,20 +164,20 @@ app.post('/students/add', (req, res) => {
         .catch(err => res.send(err));
 });
 
-app.get('/', (req, res) => {
-    res.render('home');
-});  
+app.post("/courses/add", (req, res) => {
+    data.addCourse(req.body).then(() => {
+        res.redirect("/courses");
+    }).catch((err) => {
+        res.status(500).send("Unable to Add Course");
+    });
+});
 
-app.get('/about', (req, res) => {
-    res.render('about');
-});  
-
-app.get('/htmlDemo', (req, res) => {
-    res.render('htmlDemo');
-});  
-
-app.get('/students/add', (req, res) => {
-    res.render('addStudent');
+app.post("/course/update", (req, res) => {
+    data.updateCourse(req.body).then(() => {
+        res.redirect("/courses");
+    }).catch((err) => {
+        res.status(500).send("Unable to Update Course");
+    });
 });
 
 app.use((req, res) => {         // Handling the error
